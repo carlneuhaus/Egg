@@ -45,9 +45,9 @@ func init() {
 func main() {
 	flag.Parse()
 	s := _preset
-	if !_fake {
-		s = retrieveStat()
-	}
+	// if !_fake {
+	// 	s = retrieveStat()
+	// }
 	generateSourceFile(s)
 }
 
