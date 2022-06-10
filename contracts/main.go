@@ -27,6 +27,7 @@ type entry struct {
 
 func init() {
 	eiUserId = os.Getenv("EI_USERID")
+	eiUserId = "1234"
 	if eiUserId == "" {
 		log.Fatal("EI_USERID env var not set")
 	}
