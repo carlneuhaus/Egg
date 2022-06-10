@@ -39,7 +39,7 @@ export const ZLC_EXTHEN_RECORD = {{.ZLCExthenRecord}};
 `
 
 func init() {
-	flag.BoolVar(&_fake, "fake", false, "generate a usable study_stats.ts with preset values")
+	flag.BoolVar(&_fake, "fake", true, "generate a usable study_stats.ts with preset values")
 }
 
 func main() {
