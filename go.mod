@@ -1,21 +1,18 @@
 module github.com/fanaticscripter/Egg
 
-go 1.16
+go 1.18
 
 require (
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/fanaticscripter/EggContractor v0.0.0-20220117161419-8f97ea90e00e
-	github.com/golang-migrate/migrate/v4 v4.15.1 // indirect
-	github.com/labstack/echo/v4 v4.6.3 // indirect
-	github.com/mattn/go-sqlite3 v1.14.10 // indirect
+	github.com/fanaticscripter/EggContractor v0.0.0-20220715152657-d639f6f1f84d
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/afero v1.8.0 // indirect
-	github.com/spf13/cobra v1.3.0 // indirect
-	github.com/spf13/viper v1.10.1 // indirect
-	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce // indirect
-	golang.org/x/net v0.0.0-20220114011407-0dd24b26b47d // indirect
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
-	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/protobuf v1.28.0
+)
+
+require (
+	github.com/google/go-cmp v0.5.8 // indirect
+	github.com/stretchr/testify v1.7.2 // indirect
+	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
+	golang.org/x/sys v0.0.0-20220712014510-0a85c31ab51e // indirect
 )

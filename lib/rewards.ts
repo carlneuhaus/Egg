@@ -51,17 +51,22 @@ export function rewardIconPath(r: ei.IReward | ei.Contract.IGoal): string {
       return `egginc/b_icon_${r.rewardSubType!}.png`;
     case ei.RewardType.ARTIFACT_CASE:
       return `egginc/icon_afx_chest_3.png`;
+    case ei.RewardType.SHELL_SCRIPT:
+      return `egginc/icon_shell_script_colored.png`;
     // We haven't seen a single-artifact reward yet, so I'd rather not guess
     // what rewardSubType would be, so unknown it is.
+    //
+    // Similarly, not sure what CHICKEN reward is, for now.
     case ei.RewardType.ARTIFACT:
     case ei.RewardType.CASH:
     case ei.RewardType.BOOST_TOKEN:
+    case ei.RewardType.CHICKEN:
     case ei.RewardType.UNKNOWN_REWARD:
       return 'egginc/icon_help.png';
   }
 }
 
-const epicResearchIdToName: { [key: string]: string } = {
+export const epicResearchIdToName: { [key: string]: string } = {
   hold_to_hatch: 'Hold to Hatch',
   epic_hatchery: 'Epic Hatchery',
   epic_internal_incubators: 'Epic Int. Hatcheries',
@@ -84,7 +89,7 @@ const epicResearchIdToName: { [key: string]: string } = {
   hold_to_research: 'Hold to Research',
 };
 
-const boostIdToName: { [key: string]: string } = {
+export const boostIdToName: { [key: string]: string } = {
   jimbos_blue: "Jimbo's excellent bird feed (2x 1hr)",
   jimbos_blue_big: "Jimbo's excellent bird feed (2x 8hr)",
   jimbos_purple: "Jimbo's premium bird feed (10x 30min)",
@@ -142,6 +147,10 @@ export function rewardName(r: ei.IReward | ei.Contract.IGoal): string {
       return 'Cash';
     case ei.RewardType.BOOST_TOKEN:
       return 'Boost token';
+    case ei.RewardType.CHICKEN:
+      return 'Chicken';
+    case ei.RewardType.SHELL_SCRIPT:
+      return 'Tickets';
     case ei.RewardType.UNKNOWN_REWARD:
       return 'Unknown';
   }

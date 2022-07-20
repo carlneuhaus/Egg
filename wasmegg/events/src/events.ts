@@ -48,6 +48,8 @@ export class EventType {
         return 'MISSION CAPACITY BOOST';
       case 'mission-duration':
         return 'MISSION DURATION CUT';
+      case 'shell-sale':
+        return 'SHELL SALE';
     }
   }
 
@@ -87,6 +89,8 @@ export class EventType {
         return 'fuchsia';
       case 'mission-duration':
         return 'pink';
+      case 'shell-sale':
+        return 'rose';
     }
   }
 
@@ -139,6 +143,8 @@ export class EventType {
         return 'egginc/icon_afx_chest_2.png';
       case 'mission-duration':
         return 'egginc/icon_afx_mission_duration.png';
+      case 'shell-sale':
+        return 'egginc/icon_shells_v2.png';
     }
   }
 }
@@ -161,6 +167,7 @@ const allEventTypes = (<EventTypeId[]>[
   'mission-fuel',
   'mission-capacity',
   'mission-duration',
+  'shell-sale',
 ]).map(id => new EventType(id));
 
 class _GameEvent {
@@ -246,6 +253,7 @@ export class InGameEvent extends _GameEvent {
       case 'vehicle-sale':
       case 'boost-sale':
       case 'crafting-sale':
+      case 'shell-sale':
         return `${Math.round((1 - this.multiplier) * 100)}% OFF`;
       case 'mission-duration':
         return `-${Math.round((1 - this.multiplier) * 100)}%`;
@@ -307,6 +315,7 @@ export const eventTypes = allEventTypes.filter(type => existingEventTypes.has(ty
   'text-purple-500',
   'text-fuchsia-500',
   'text-pink-500',
+  'text-rose-500',
 
   'text-gray-300',
   'text-red-300',
@@ -325,6 +334,7 @@ export const eventTypes = allEventTypes.filter(type => existingEventTypes.has(ty
   'text-purple-300',
   'text-fuchsia-300',
   'text-pink-300',
+  'text-rose-300',
 
   'bg-gray-500',
   'bg-red-500',
@@ -343,4 +353,5 @@ export const eventTypes = allEventTypes.filter(type => existingEventTypes.has(ty
   'bg-purple-500',
   'bg-fuchsia-500',
   'bg-pink-500',
+  'bg-rose-500',
 ];

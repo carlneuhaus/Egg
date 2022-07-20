@@ -5,8 +5,11 @@
         <template v-for="column in columns" :key="column.id">
           <th
             scope="col"
-            class="px-4 py-2 text-xs font-medium whitespace-nowrap cursor-pointer select-none"
-            :class="column.id === 'name' ? 'text-left' : 'text-center'"
+            class="px-4 py-2 text-xs font-medium whitespace-nowrap select-none"
+            :class="[
+              column.id === 'name' ? 'text-left' : 'text-center',
+              column.id !== 'artifacts' && column.id !== 'boosts' ? 'cursor-pointer' : '',
+            ]"
             @click="setSortBy(column.id)"
           >
             <span
@@ -34,7 +37,11 @@
                 <span class="text-gray-500 dark:text-gray-200">{{ column.name }}</span>
               </template>
 
-              <svg viewBox="0 0 320 512" class="flex-shrink-0 h-3 text-gray-400">
+              <svg
+                v-if="column.id !== 'artifacts' && column.id !== 'boosts'"
+                viewBox="0 0 320 512"
+                class="flex-shrink-0 h-3 text-gray-400"
+              >
                 <path
                   v-if="!(sortBy === column.id && !sortAscending)"
                   fill="currentColor"
@@ -127,6 +134,22 @@
         <td
           class="px-4 py-1 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-200 tabular-nums"
         >
+          <coop-card-contribution-table-artifact-gallery
+            v-if="contributor.farmShared && contributor.artifacts.artifacts.length > 0"
+            :artifact-set="(contributor.artifacts as ArtifactSet)"
+            class="mx-auto"
+          />
+          <span
+            v-else-if="contributor.farmShared"
+            v-tippy="{ content: 'Farm is shared but no artifact is equipped.' }"
+            class="hover:cursor-help"
+            >&ndash;</span
+          >
+          <template v-else>Private</template>
+        </td>
+        <td
+          class="px-4 py-1 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-200 tabular-nums"
+        >
           {{ formatEIValue(contributor.eggsLaid) }}
         </td>
         <td
@@ -151,6 +174,40 @@
           {{ formatWithThousandSeparators(contributor.tokens) }}
         </td>
         <td
+          v-if="showOptionalColumn.tokensSpent"
+          class="px-4 py-1 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-200 tabular-nums"
+        >
+          <template v-if="contributor.tokensSpent !== null">
+            {{ formatWithThousandSeparators(contributor.tokensSpent) }}
+          </template>
+          <template v-else>&ndash;</template>
+        </td>
+        <td
+          class="px-4 py-1 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-200 tabular-nums"
+        >
+          <div
+            v-if="contributor.farmShared && contributor.boosts.length > 0"
+            class="flex items-center justify-center"
+          >
+            <base-icon
+              v-for="(boost, i) of contributor.boosts"
+              :key="i"
+              v-tippy="{ content: `${boostIdToName[boost.boostId ?? ''] ?? '?'}` }"
+              :icon-rel-path="`egginc/b_icon_${boost.boostId}.png`"
+              class="flex-0 h-4 w-4"
+            />
+          </div>
+          <span
+            v-else-if="contributor.farmShared"
+            v-tippy="{
+              content: 'Farm is shared but no boost was active when the player last checked in.',
+            }"
+            class="hover:cursor-help"
+            >&ndash;</span
+          >
+          <template v-else>Private</template>
+        </td>
+        <td
           class="px-4 py-1 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-200 tabular-nums"
         >
           {{ (contributor.earningsBoost * 100).toFixed(0) }}%
@@ -159,15 +216,6 @@
           class="px-4 py-1 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-200 tabular-nums"
         >
           {{ (contributor.eggLayingRateBoost * 100).toFixed(0) }}%
-        </td>
-        <td
-          v-if="showOptionalColumn.tokensSpent"
-          class="px-4 py-1 whitespace-nowrap text-center text-sm text-gray-500 dark:text-gray-200 tabular-nums"
-        >
-          <template v-if="contributor.tokensSpent !== null">
-            {{ formatWithThousandSeparators(contributor.tokensSpent) }}
-          </template>
-          <template v-else>&ndash;</template>
         </td>
         <td
           v-if="showOptionalColumn.hourlyLayingRateUncapped"
@@ -246,10 +294,10 @@
   </table>
 </template>
 
-<script lang="ts">
-import { PropType, computed, defineComponent, ref, toRefs, inject, Ref } from 'vue';
+<script setup lang="ts">
+import { computed, ref, toRefs, inject, Ref } from 'vue';
 
-import { CoopStatus, eggIconPath, ei, formatEIValue } from '@/lib';
+import { ArtifactSet, CoopStatus, boostIdToName, eggIconPath, ei, formatEIValue } from '@/lib';
 import {
   getSessionStorage,
   setSessionStorage,
@@ -259,13 +307,16 @@ import {
 import { devmodeKey } from '@/symbols';
 import BaseClickToCopy from '@/components/BaseClickToCopy.vue';
 import BaseIcon from 'ui/components/BaseIcon.vue';
+import CoopCardContributionTableArtifactGallery from '@/components/CoopCardContributionTableArtifactGallery.vue';
 
 const requiredColumnIds = [
   'name',
+  'artifacts',
   'eggsLaid',
   'eggsPerHour',
   'earningBonusPercentage',
   'tokens',
+  'boosts',
   'earningsBoost',
   'role',
   'eggLayingRateBoost',
@@ -292,182 +343,170 @@ type ColumnSpec = {
   tooltip?: string;
 };
 
-export default defineComponent({
-  components: {
-    BaseClickToCopy,
-    BaseIcon,
-  },
-  props: {
-    egg: {
-      type: Number as PropType<ei.Egg>,
-      required: true,
-    },
-    coopStatus: {
-      type: Object as PropType<CoopStatus>,
-      required: true,
-    },
-  },
-  setup(props) {
-    const { egg, coopStatus } = toRefs(props);
-    const devmode = inject(devmodeKey);
+const props = defineProps<{ egg: ei.Egg; coopStatus: CoopStatus }>();
 
-    const showOptionalColumn = computed(
-      () =>
-        Object.fromEntries(
-          optionalColumnIds.map(col => [
-            col,
-            coopStatus.value.contributors.some(contributor => contributor[col] !== null),
-          ])
-        ) as Record<OptionalColumnId, boolean>
-    );
-    const columns: Ref<ColumnSpec[]> = computed(() => {
-      const cols: ColumnSpec[] = [
-        {
-          id: 'name',
-          name: 'Player',
-        },
-        {
-          id: 'eggsLaid',
-          name: 'Shipped',
-        },
-        {
-          id: 'eggsPerHour',
-          name: 'Rate/hr',
-          iconPath: eggIconPath(egg.value),
-          suffix: '/ hr',
-        },
-        {
-          id: 'earningBonusPercentage',
-          name: 'EB%',
-        },
-        {
-          id: 'role',
-          name: 'Role',
-        },
-        {
-          id: 'tokens',
-          name: 'Tokens',
-          iconPath: 'egginc/b_icon_token.png',
-          tooltip: 'Tokens left',
-        },
-        {
-          id: 'earningsBoost',
-          name: 'SiaB',
-          iconPath: 'egginc/afx_ship_in_a_bottle_4.png',
-          tooltip: 'Earnings boost percentage from Ship in a Bottle equipped by each contributor',
-        },
-        {
-          id: 'eggLayingRateBoost',
-          name: 'TD',
-          iconPath: 'egginc/afx_tachyon_deflector_4.png',
-          tooltip:
-            'Egg laying rate boost percentage from Tachyon Deflector equipped by each contributor',
-        },
-      ];
-      if (showOptionalColumn.value.tokensSpent) {
-        cols.push({
-          id: 'tokensSpent',
-          name: 'Tokens spent',
-          iconPath: 'egginc/b_icon_token.png',
-          suffix: ' \u{00a0}spent',
-          tooltip: 'Tokens spent',
-        });
-      }
-      if (showOptionalColumn.value.hourlyLayingRateUncapped) {
-        cols.push({
-          id: 'hourlyLayingRateUncapped',
-          name: 'Laying / hr',
-          tooltip: 'Egg laying rate from all chickens, not capped by shipping capacity',
-        });
-      }
-      if (showOptionalColumn.value.hourlyShippingCapacity) {
-        cols.push({
-          id: 'hourlyShippingCapacity',
-          name: 'Max shipping / hr',
-        });
-      }
-      if (showOptionalColumn.value.farmPopulation) {
-        cols.push({
-          id: 'farmPopulation',
-          name: 'Population',
-        });
-      }
-      if (showOptionalColumn.value.farmCapacity) {
-        cols.push({
-          id: 'farmCapacity',
-          name: 'Hab space',
-        });
-      }
-      if (showOptionalColumn.value.internalHatcheryRatePerMinPerHab) {
-        cols.push({
-          id: 'internalHatcheryRatePerMinPerHab',
-          name: 'IHR / min / hab',
-          tooltip: 'Internal hatchery rate, including boost effect if any',
-        });
-      }
-      return cols;
+const { egg, coopStatus } = toRefs(props);
+const devmode = inject(devmodeKey);
+
+const showOptionalColumn = computed(
+  () =>
+    Object.fromEntries(
+      optionalColumnIds.map(col => [
+        col,
+        coopStatus.value.contributors.some(contributor => contributor[col] !== null),
+      ])
+    ) as Record<OptionalColumnId, boolean>
+);
+const columns: Ref<ColumnSpec[]> = computed(() => {
+  const cols: ColumnSpec[] = [
+    {
+      id: 'name',
+      name: 'Player',
+    },
+    {
+      id: 'artifacts',
+      name: 'Artifacts',
+    },
+    {
+      id: 'eggsLaid',
+      name: 'Shipped',
+    },
+    {
+      id: 'eggsPerHour',
+      name: 'Rate/hr',
+      iconPath: eggIconPath(egg.value),
+      suffix: '/ hr',
+    },
+    {
+      id: 'earningBonusPercentage',
+      name: 'EB%',
+    },
+    {
+      id: 'role',
+      name: 'Role',
+    },
+    {
+      id: 'tokens',
+      name: 'Tokens',
+      iconPath: 'egginc/b_icon_token.png',
+      tooltip: 'Tokens left',
+    },
+  ];
+  if (showOptionalColumn.value.tokensSpent) {
+    cols.push({
+      id: 'tokensSpent',
+      name: 'Tokens spent',
+      iconPath: 'egginc/b_icon_token.png',
+      suffix: ' \u{00a0}spent',
+      tooltip: 'Tokens spent',
     });
-
-    const columnIds: Ref<string[]> = computed(() => columns.value.map(col => col.id));
-    const defaultSortBy: ColumnId = 'eggsLaid';
-    const sortBySessionStorageKey = computed(
-      () => `${coopStatus.value.contractId}:${coopStatus.value.coopCode}_sortBy`
-    );
-    const sortAscendingSessionStorageKey = computed(
-      () => `${coopStatus.value.contractId}:${coopStatus.value.coopCode}_sortAscending`
-    );
-    let initialSortBy = getSessionStorage(sortBySessionStorageKey.value);
-    if (initialSortBy === undefined || !columnIds.value.includes(initialSortBy)) {
-      initialSortBy = defaultSortBy;
+  }
+  cols.push(
+    {
+      id: 'boosts',
+      name: 'Boosts',
+    },
+    {
+      id: 'earningsBoost',
+      name: 'SiaB',
+      iconPath: 'egginc/afx_ship_in_a_bottle_4.png',
+      tooltip: 'Earnings boost percentage from Ship in a Bottle equipped by each contributor',
+    },
+    {
+      id: 'eggLayingRateBoost',
+      name: 'TD',
+      iconPath: 'egginc/afx_tachyon_deflector_4.png',
+      tooltip:
+        'Egg laying rate boost percentage from Tachyon Deflector equipped by each contributor',
     }
-    const sortBy = ref(initialSortBy as ColumnId);
-    const initialSortAscending = getSessionStorage(sortAscendingSessionStorageKey.value) === 'true';
-    const sortAscending = ref(initialSortAscending);
-    const setSortBy = (by: ColumnId) => {
-      if (!columnIds.value.includes(by)) {
-        by = defaultSortBy;
-      }
-      if (sortBy.value === by) {
-        sortAscending.value = !sortAscending.value;
-      } else {
-        sortBy.value = by;
-        sortAscending.value = by === 'name';
-      }
-      setSessionStorage(sortBySessionStorageKey.value, by);
-      setSessionStorage(sortAscendingSessionStorageKey.value, sortAscending.value);
-    };
-
-    const sortedContributors = computed(() => {
-      const sorted = [...coopStatus.value.contributors].sort((c1, c2) => {
-        let cmp: number;
-        switch (sortBy.value) {
-          case 'name':
-            cmp = c1.name.localeCompare(c2.name);
-            break;
-          case 'role':
-            cmp = c1.earningBonusPercentage - c2.earningBonusPercentage;
-            break;
-          default:
-            cmp = (c1[sortBy.value] || 0) - (c2[sortBy.value] || 0);
-        }
-        // Use eggsLaid as tiebreaker.
-        return cmp !== 0 ? cmp : c1.eggsLaid - c2.eggsLaid;
-      });
-      return sortAscending.value ? sorted : sorted.reverse();
+  );
+  if (showOptionalColumn.value.hourlyLayingRateUncapped) {
+    cols.push({
+      id: 'hourlyLayingRateUncapped',
+      name: 'Laying / hr',
+      tooltip: 'Egg laying rate from all chickens, not capped by shipping capacity',
     });
+  }
+  if (showOptionalColumn.value.hourlyShippingCapacity) {
+    cols.push({
+      id: 'hourlyShippingCapacity',
+      name: 'Max shipping / hr',
+    });
+  }
+  if (showOptionalColumn.value.farmPopulation) {
+    cols.push({
+      id: 'farmPopulation',
+      name: 'Population',
+    });
+  }
+  if (showOptionalColumn.value.farmCapacity) {
+    cols.push({
+      id: 'farmCapacity',
+      name: 'Hab space',
+    });
+  }
+  if (showOptionalColumn.value.internalHatcheryRatePerMinPerHab) {
+    cols.push({
+      id: 'internalHatcheryRatePerMinPerHab',
+      name: 'IHR / min / hab',
+      tooltip: 'Internal hatchery rate, including boost effect if any',
+    });
+  }
+  return cols;
+});
 
-    return {
-      devmode,
-      columns,
-      showOptionalColumn,
-      sortBy,
-      sortAscending,
-      setSortBy,
-      sortedContributors,
-      formatEIValue,
-      formatWithThousandSeparators,
-      renderNonempty,
-    };
-  },
+const columnIds: Ref<string[]> = computed(() => columns.value.map(col => col.id));
+const defaultSortBy: ColumnId = 'eggsLaid';
+const sortBySessionStorageKey = computed(
+  () => `${coopStatus.value.contractId}:${coopStatus.value.coopCode}_sortBy`
+);
+const sortAscendingSessionStorageKey = computed(
+  () => `${coopStatus.value.contractId}:${coopStatus.value.coopCode}_sortAscending`
+);
+let initialSortBy = getSessionStorage(sortBySessionStorageKey.value);
+if (initialSortBy === undefined || !columnIds.value.includes(initialSortBy)) {
+  initialSortBy = defaultSortBy;
+}
+const sortBy = ref(initialSortBy as ColumnId);
+const initialSortAscending = getSessionStorage(sortAscendingSessionStorageKey.value) === 'true';
+const sortAscending = ref(initialSortAscending);
+const setSortBy = (by: ColumnId) => {
+  if (by === 'artifacts' || by === 'boosts') {
+    return;
+  }
+  if (!columnIds.value.includes(by)) {
+    by = defaultSortBy;
+  }
+  if (sortBy.value === by) {
+    sortAscending.value = !sortAscending.value;
+  } else {
+    sortBy.value = by;
+    sortAscending.value = by === 'name';
+  }
+  setSessionStorage(sortBySessionStorageKey.value, by);
+  setSessionStorage(sortAscendingSessionStorageKey.value, sortAscending.value);
+};
+
+const sortedContributors = computed(() => {
+  const sorted = [...coopStatus.value.contributors].sort((c1, c2) => {
+    let cmp: number;
+    switch (sortBy.value) {
+      case 'name':
+        cmp = c1.name.localeCompare(c2.name);
+        break;
+      case 'role':
+        cmp = c1.earningBonusPercentage - c2.earningBonusPercentage;
+        break;
+      case 'artifacts':
+      case 'boosts':
+        cmp = 0;
+        break;
+      default:
+        cmp = (c1[sortBy.value] || 0) - (c2[sortBy.value] || 0);
+    }
+    // Use eggsLaid as tiebreaker.
+    return cmp !== 0 ? cmp : c1.eggsLaid - c2.eggsLaid;
+  });
+  return sortAscending.value ? sorted : sorted.reverse();
 });
 </script>

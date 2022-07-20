@@ -19,11 +19,14 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: '18'
           cache: 'yarn'
           cache-dependency-path: |
             yarn.lock
             yarn-global/yarn.lock
+      - name: Do other preparations
+        run: |
+          ../action-scripts/prepare
       - name: Build lib
         working-directory: lib
         run: |
@@ -68,8 +71,11 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: '18'
           cache: 'yarn'
+      - name: Do other preparations
+        run: |
+          ../action-scripts/prepare
       - name: Build lib
         working-directory: lib
         run: |
@@ -101,11 +107,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: '^1.17'
+          go-version: '^1.18'
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: '18'
           cache: 'yarn'
           cache-dependency-path: |
             yarn.lock
@@ -114,6 +120,9 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
+      - name: Do other preparations
+        run: |
+          ../action-scripts/prepare
       - name: Build lib
         working-directory: lib
         run: |
@@ -176,16 +185,19 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: '^1.17'
+          go-version: '^1.18'
       - name: Set up Node
         uses: actions/setup-node@v2
         with:
-          node-version: '16'
+          node-version: '18'
           cache: 'yarn'
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.x'
+      - name: Do other preparations
+        run: |
+          ../action-scripts/prepare
       - name: Build lib
         working-directory: lib
         run: |

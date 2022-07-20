@@ -16,6 +16,9 @@ const API_ROOT =
     : 'https://wasmegg.zw.workers.dev/?url=https://www.auxbrain.com';
 const TIMEOUT = 5000;
 
+// A valid userId donated by a volunteer.
+const defaultUserId = atob('RUk1NDc5OTE2NjQyNzYyNzUy');
+
 /**
  * Makes an API request.
  * @param endpoint - Path of API endpoint, e.g. /ei/coop_status.
@@ -57,6 +60,22 @@ export async function request(endpoint: string, encodedPayload: string): Promise
 }
 
 /**
+ * @param [userId]
+ * @returns
+ * @throws
+ */
+export async function requestConfig(userId?: string): Promise<ei.IConfigResponse> {
+  // A valid userId is required for a complete response.
+  userId = userId ?? defaultUserId;
+  const requestPayload: ei.IConfigRequest = {
+    rinfo: basicRequestInfo(userId),
+  };
+  const encodedRequestPayload = encodeMessage(ei.ConfigRequest, requestPayload);
+  const encodedResponsePayload = await request('/ei/get_config', encodedRequestPayload);
+  return decodeMessage(ei.ConfigResponse, encodedResponsePayload, true) as ei.IConfigResponse;
+}
+
+/**
  * @param userId
  * @returns
  * @throws
@@ -66,29 +85,33 @@ export async function requestFirstContact(userId: string): Promise<ei.IEggIncFir
   const requestPayload: ei.IEggIncFirstContactRequest = {
     rinfo: basicRequestInfo(''),
     eiUserId: userId,
+    deviceId: 'wasmegg', // This is actually bot_name for /ei/bot_first_contact, operating on an honor system.
     clientVersion: CLIENT_VERSION,
     platform: PLATFORM,
   };
   const encodedRequestPayload = encodeMessage(ei.EggIncFirstContactRequest, requestPayload);
-  const encodedResponsePayload = await request('/ei/first_contact', encodedRequestPayload);
+  const encodedResponsePayload = await request('/ei/bot_first_contact', encodedRequestPayload);
   return decodeMessage(
     ei.EggIncFirstContactResponse,
     encodedResponsePayload,
-    true
+    false
   ) as ei.IEggIncFirstContactResponse;
 }
 
 /**
  * @param contractId
  * @param coopCode
+ * @param [userId]
  * @returns
  * @throws
  */
 export async function requestCoopStatus(
   contractId: string,
-  coopCode: string
+  coopCode: string,
+  userId?: string
 ): Promise<ei.IContractCoopStatusResponse> {
-  const userId = '';
+  // A valid userId is now required.
+  userId = userId ?? defaultUserId;
   const requestPayload: ei.IContractCoopStatusRequest = {
     rinfo: basicRequestInfo(userId),
     contractIdentifier: contractId,
